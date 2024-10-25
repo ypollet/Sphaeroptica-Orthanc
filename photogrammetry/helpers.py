@@ -30,7 +30,6 @@
 
 
 from enum import Enum
-from PySide6.QtCore import Qt
 import numpy as np
 
 HEIGHT_COMPONENT = 25
@@ -52,25 +51,6 @@ class Action(Enum):
     DELETE = 1
     HIDE = 2
 
-
-class Arrows(Enum):
-    UP = Qt.Key.Key_Up
-    DOWN = Qt.Key.Key_Down
-    RIGHT = Qt.Key.Key_Right
-    LEFT = Qt.Key.Key_Left
-
-switch = {
-    Qt.Key.Key_Plus : 1,
-    Qt.Key.Key_Minus : -1,
-}
-
-class Keys(Enum):
-    FRONT = Qt.Key.Key_F
-    POST = Qt.Key.Key_P
-    RIGHT = Qt.Key.Key_R
-    LEFT = Qt.Key.Key_L
-    INFERIOR = Qt.Key.Key_I
-    SUPERIOR = Qt.Key.Key_S
 
 class ProjPoint():
     """object containing the projection matrix of the image and the pixel for each landmark posed

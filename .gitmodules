@@ -1,3 +1,9 @@
 [submodule "frontend"]
 	path = frontend
 	url = git@github.com:ypollet/Sphaeroptica-Frontend.git
+[submodule "photogrammetry."]
+	path = photogrammetry.
+	url = git@github.com:ypollet/Sphaeroptica-Photogrammetry.git
+[submodule "photogrammetry"]
+	path = photogrammetry
+	url = git@github.com:ypollet/Sphaeroptica-Photogrammetry.git

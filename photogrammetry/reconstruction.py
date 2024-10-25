@@ -199,6 +199,7 @@ def triangulate_point(proj_points : list[helpers.ProjPoint]) -> np.ndarray:
                              proj_mat[0, :] - img_point[0]*proj_mat[2, :]])
         A = np.concatenate([A, view]) if A is not None else view
         
+    print(f"A => \n{A}")
     U, s, Vh = np.linalg.svd(A, full_matrices = False)
 
     X = np.squeeze(np.asarray(Vh[-1,:]))
@@ -218,7 +219,6 @@ def project_points(point3D : np.ndarray, intrinsics : np.ndarray, extrinsics  : 
         np.ndarray: the pixel of the reprojection
     """
     point = intrinsics @ extrinsics @ point3D.T
-    print(point)
     factor = point.item(2)
     
     pos = np.array([0,0])

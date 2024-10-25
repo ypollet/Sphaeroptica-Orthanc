@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, send_from_directory, abort
+from flask import Flask, render_template, jsonify, request, send_file, abort
 
 from flask_cors import CORS, cross_origin
 
@@ -11,6 +11,26 @@ import json
 import numpy as np
 
 from photogrammetry import helpers, converters, reconstruction
+
+import os
+import dotenv
+
+import requests
+from requests.auth import HTTPBasicAuth
+
+dotenv.load_dotenv(".env.local") | dotenv.load_dotenv() 
+
+
+auth = None #HTTPBasicAuth(os.environ.get("ORTHANC_USERNAME"), os.environ.get("ORTHANC_PASSWD"))
+orthanc_server = os.environ.get("ORTHANC_SERVER")
+
+shortcuts_metadata = {"FRONT": "shortcut_F",
+                      "POST": "shortcut_P",
+                      "LEFT": "shortcut_L",
+                      "RIGHT": "shortcut_R",
+                      "INFERIOR": "shortcut_I",
+                      "SUPERIOR": "shortcut_S"
+                    }
 
 
 cwd = os.getcwd()
@@ -52,20 +72,31 @@ def triangulate(id):
   if request.method == 'POST':
     data = request.get_json()
     poses = data['poses']
-    directory = f"{DATA_FOLDER}/{id}"
-    with open(f"{directory}/calibration.json", "r") as f:
-      calib_file = json.load(f)
 
-    intrinsics = np.matrix(calib_file["intrinsics"]["camera matrix"]["matrix"])
     proj_points = []
     for image in poses:
-      extrinsics = np.matrix(calib_file["extrinsics"][image]["matrix"])
+      response = requests.get(url=f"{orthanc_server}/instances/{image}/simplified-tags",auth=auth)
+      if not response.ok:
+        abort(404)
+      tags : dict = json.loads(response.content)
+      intrinsics = np.matrix([float(x) for x in tags["Intrinsics"].split("\\")]).reshape((3,3))
+      rotation = np.matrix([float(x) for x in tags["RotationMat"].split("\\")]).reshape((3,3))
+      trans = np.matrix([float(x) for x in tags["TranslationMat"].split("\\")]).reshape((3,1))
+      dist_coeffs = np.matrix([float(x) for x in tags["DistortionCoefficients"].split("\\")]).reshape(1, -1)
+      #print(np.concatenate([dist_coeffs, np.matrix([0 for x in range(8 - dist_coeffs.shape[1])])], axis=1))
+      
+      ext = np.hstack((rotation, trans))
+      extrinsics =  np.vstack((ext, [0, 0, 0 ,1]))
+      
       proj_mat = reconstruction.projection_matrix(intrinsics, extrinsics)
       pose = np.matrix([poses[image]['x'], poses[image]['y']])
-      proj_points.append(helpers.ProjPoint(proj_mat, pose))
+      undistorted_pos = reconstruction.undistort_iter(np.array([pose]).reshape((1,1,2)), intrinsics, dist_coeffs)
+      print(f"{image} => \n{proj_mat}\n{undistorted_pos}")
+      proj_points.append(helpers.ProjPoint(proj_mat, undistorted_pos))
     
     # Triangulation computation with all the undistorted landmarks
-    landmark_pos = reconstruction.triangulate_point(proj_points)      
+    landmark_pos = reconstruction.triangulate_point(proj_points)
+    print(f"Position = {landmark_pos}") 
   
     return {"result": {
           "position": landmark_pos.tolist()
@@ -78,95 +109,103 @@ def reproject(id):
   if request.method == 'POST':
     data = request.get_json()
     position = np.array(data["position"])
-    print(position.shape)
     image_name = data['image']
     
-    directory = f"{DATA_FOLDER}/{id}"
-    with open(f"{directory}/calibration.json", "r") as f:
-      calib_file = json.load(f)
-
-    intrinsics = np.matrix(calib_file["intrinsics"]["camera matrix"]["matrix"])
-    dist_coeffs = np.matrix(calib_file["intrinsics"]["distortion matrix"]["matrix"])
-    extrinsics = np.matrix(calib_file["extrinsics"][image_name]["matrix"])[0:3, 0:4]
-
-    pose = reconstruction.project_points(position, intrinsics, extrinsics, dist_coeffs)
+    response = requests.get(url=f"{orthanc_server}/instances/{image_name}/simplified-tags",auth=auth)
+    if not response.ok:
+      abort(404)
+    tags : dict = json.loads(response.content)
+    intrinsics = np.matrix([float(x) for x in tags["Intrinsics"].split("\\")]).reshape((3,3))
+    dist_coeffs = np.matrix([float(x) for x in tags["DistortionCoefficients"].split("\\")]).reshape(1, -1)
     
-    print(position)
-    print(image_name)
+    rotation = np.matrix([float(x) for x in tags["RotationMat"].split("\\")]).reshape((3,3))
+    trans = np.matrix([float(x) for x in tags["TranslationMat"].split("\\")]).reshape((3,1))
+    ext = np.hstack((rotation, trans))
+    extrinsics =  np.vstack((ext, [0, 0, 0 ,1]))
+    
+    pose = reconstruction.project_points(position, intrinsics, ext, dist_coeffs)
+    
+    
     return {"result":{
           "pose": {"x": pose.item(0), "y": pose.item(1)}
        }}
 
-def get_response_image(image_path):
-    pil_img = Image.open(image_path, mode='r') # reads the PIL image
-    byte_arr = io.BytesIO()
-    pil_img.save(byte_arr, format=pil_img.format) # convert the PIL image to byte array
-    encoded_img = encodebytes(byte_arr.getvalue()).decode('ascii') # encode as base64
-    
-    return {"image": f"data:image/{pil_img.format.lower()};base64, {encoded_img}",
-            "format": pil_img.format.lower(),
-            "height": pil_img.height,
-            "width": pil_img.width
+def get_response_thumbnail(instance):
+    byte_arr = requests.get(url=f"{orthanc_server}/instances/{instance}/attachments/thumbnail/data",auth=auth).content
+    encoded_img = encodebytes(byte_arr).decode('ascii') # encode as base64
+    format = "jpeg"
+    return {"image": f"data:image/{format};base64, {encoded_img}",
+            "name" : instance,
+            "format": format,
           }
+
+def get_response_image(instance):
+    byte_arr = requests.get(url=f"{orthanc_server}/instances/{instance}/content/7fe0-0010/1",auth=auth).content
+    return byte_arr
 
 
 # send single image
-@app.route('/<id>/<image_name>')
+@app.route('/<id>/<image_id>')
 @cross_origin()
-def image(id, image_name):
-  print(f"Image for {id}/{image_name}")
-  directory = f"{DATA_FOLDER}/{id}"
-  image_data = {}
+def image(id,image_id):
   try:
-    image_data = get_response_image(f"{directory}/{image_name}")
-    image_data["name"] = image_name
-               
+    image_binary = get_response_image(image_id)
+    return send_file(
+      io.BytesIO(image_binary),
+      mimetype='image/jpeg',
+      as_attachment=False)       
   except Exception as error:
     print(error)
-    
-#  return send_from_directory(DATA_FOLDER, f"{path}/{image_name}")
-  return image_data["image"]
+  
+
+  
 
 # send_shortcuts page
 @app.route('/<id>/shortcuts')
 @cross_origin()
 def shortcuts(id):
-  directory = f"{DATA_FOLDER}/{id}"
-  with open(f"{directory}/calibration.json", "r") as f:
-    calib_file = json.load(f)
+  response = requests.get(url=f"{orthanc_server}/series/{id}/metadata?expand",auth=auth)
+  if not response.ok:
+    abort(404)
+  
+  shortcut_dict = json.loads(response.content)
   to_jsonify = {}
-  to_jsonify["commands"] = []
-  for command in calib_file["commands"]:
-    longitude, latitude = calib_file["commands"][command]
-    to_jsonify["commands"].append({"name" : command, "longitude": longitude, "latitude": latitude})
-    
-  return jsonify({'result': to_jsonify})
+  to_jsonify["commands"] = dict()
+  for command, shortcut in shortcuts_metadata.items():
+    to_jsonify["commands"][command] = shortcut_dict[shortcut]
+  return jsonify(to_jsonify)
+
+
 # send images
 @app.route('/<id>/images')
 @cross_origin()
 def images(id):
-  directory = f"{DATA_FOLDER}/{id}"
-  if not os.path.exists(directory):
+  
+  
+  response = requests.get(url=f"{orthanc_server}/series/{id}/instances-tags?simplify",auth=auth)
+  if not response.ok:
     abort(404)
-  with open(f"{directory}/calibration.json", "r") as f:
-            calib_file = json.load(f)
+  orthanc_dict : dict = json.loads(response.content)
+  
   to_jsonify = {}
   encoded_images = []
   centers = {}
   centers_x = []
   centers_y = []
   centers_z = []
-  for image_name in calib_file["extrinsics"]:
+  for instance, tags in orthanc_dict.items():
     try:
-      image_data = get_response_image(f"{directory}/{calib_file['thumbnails']}/{image_name}")
-      image_data["name"] = image_name
+      image_data = get_response_thumbnail(instance)
+      image_data.update({
+        "height" : tags["Rows"],
+        "width" : tags["Columns"]
+      })
       
-      mat = np.matrix(calib_file["extrinsics"][image_name]["matrix"])
-      rotation = mat[0:3, 0:3]
-      trans = mat[0:3, 3]
+      rotation = np.array([float(x) for x in tags["RotationMat"].split("\\")]).reshape((3,3))
+      trans = np.array([float(x) for x in tags["TranslationMat"].split("\\")]).reshape((3,1))
       C = converters.get_camera_world_coordinates(rotation, trans)
       
-      centers[image_name] = C
+      centers[instance] = C
       centers_x.append(C.item(0)) # x
       centers_y.append(C.item(1)) # y
       centers_z.append(C.item(2)) # z
@@ -178,8 +217,8 @@ def images(id):
   _, center = reconstruction.sphereFit(centers_x, centers_y, centers_z)
   
   for image_data in encoded_images:
-    image_name = image_data["name"]
-    C = centers[image_name]
+    instance = image_data["name"]
+    C = centers[instance]
     vec = C - center
     long, lat = converters.get_long_lat(vec)
     image_data["longitude"], image_data["latitude"] = converters.rad2degrees(long), converters.rad2degrees(lat)
@@ -188,4 +227,5 @@ def images(id):
   return jsonify({'result': to_jsonify})
 
 if __name__ == '__main__':
-    app.run()
+  print("HELLO")
+  app.run(debug=True, port=5001)
