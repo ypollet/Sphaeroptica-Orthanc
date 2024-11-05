@@ -1,12 +1,10 @@
-from flask import Flask, render_template, jsonify, request, send_file, abort
+from flask import Flask, send_from_directory, jsonify, request, send_file, abort
 
 from flask_cors import CORS, cross_origin
 
 from base64 import encodebytes
-import glob
 import io
 import os
-from PIL import Image
 import json
 import numpy as np
 
@@ -62,9 +60,18 @@ site_data = {
 }
 
 # landing page
-@app.route('/<id>')
-def welcome(id):
-  return render_template('index.html', **site_data)
+@app.route('/')
+def welcome():
+  f = open(f"frontend/dist/index.html", "r")
+  return serveFile('index.html')
+
+@app.route('/<path:filename>')
+def serveFile(filename):
+  return send_from_directory("frontend/dist", filename)
+
+@app.route('/static/<path:filename>')
+def my_static(filename):
+  return send_from_directory("frontend/dist/static", filename)
 
 
 @app.route('/<id>/triangulate', methods=['POST'])
@@ -170,7 +177,7 @@ def shortcuts(id):
   
   shortcut_dict = json.loads(response.content)
   to_jsonify = {}
-  to_jsonify["commands"] = dict()
+  to_jsonify["commands"] = shortcuts_metadata
   for command, shortcut in shortcuts_metadata.items():
     to_jsonify["commands"][command] = shortcut_dict[shortcut]
   return jsonify(to_jsonify)

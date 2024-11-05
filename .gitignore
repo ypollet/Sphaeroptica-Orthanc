@@ -2,7 +2,5 @@
 test.py
 .venv
 .env
-EmbedJpegIntoDicom.py
-_x_00000_y_00000_.jpg
 sc.dcm
 AddThumbnail.py
