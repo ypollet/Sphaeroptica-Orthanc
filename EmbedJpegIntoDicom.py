@@ -9,6 +9,7 @@ import numpy as np
 from pathlib import Path
 home = Path.home()
 import requests
+import os
 
 path_to_project = "Numerisation/test_dicomization/test_sphaeroptica/Study/Serie"
 SOURCE = f'{home}/{path_to_project}/*.jpg'
