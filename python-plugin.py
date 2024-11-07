@@ -1,6 +1,6 @@
 # Sphaeroptica - 3D Viewer on calibrated
 
-# Copyright (C) 2023 Yann Pollet, Royal Belgian Institute of Natural Sciences
+# Copyright (C) 2024 Yann Pollet, Royal Belgian Institute of Natural Sciences
 
 #
 
