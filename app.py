@@ -58,20 +58,14 @@ site_data = {
     'site': SITE,
     'owner': OWNER
 }
-
-# landing page
-@app.route('/')
-def welcome():
-  f = open(f"frontend/dist/index.html", "r")
-  return serveFile('index.html')
-
 @app.route('/<path:filename>')
 def serveFile(filename):
+  print(f"Sending file : {filename}")
   return send_from_directory("frontend/dist", filename)
-
+'''
 @app.route('/static/<path:filename>')
 def my_static(filename):
-  return send_from_directory("frontend/dist/static", filename)
+  return send_from_directory("frontend/dist/static", filename)'''
 
 
 @app.route('/<id>/triangulate', methods=['POST'])
@@ -177,7 +171,7 @@ def shortcuts(id):
   
   shortcut_dict = json.loads(response.content)
   to_jsonify = {}
-  to_jsonify["commands"] = shortcuts_metadata
+  to_jsonify["commands"] = dict()
   for command, shortcut in shortcuts_metadata.items():
     to_jsonify["commands"][command] = shortcut_dict[shortcut]
   return jsonify(to_jsonify)

@@ -4,11 +4,11 @@
     "private": true,
     "type": "module",
     "scripts": {
-    "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "preview": "cd frontend && npm run preview",
-    "build-only": "cd frontend && npm run build-only",
-    "type-check": "cd frontend && npm run type-check",
-    "install": "cd frontend && npm install"
-  }
+        "dev": "cd frontend && npm run dev",
+        "build": "cd frontend && npm run build",
+        "preview": "cd frontend && npm run preview",
+        "build-only": "cd frontend && npm run build-only",
+        "type-check": "cd frontend && npm run type-check",
+        "install": "cd frontend && npm install"
+    }
 }
