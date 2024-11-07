@@ -99,10 +99,9 @@ def triangulate(id):
     landmark_pos = reconstruction.triangulate_point(proj_points)
     print(f"Position = {landmark_pos}") 
   
-    return {"result": {
-          "position": landmark_pos.tolist()
-       }
-    }
+    return {
+            "position": landmark_pos.tolist()
+          }
           
 
 @app.route('/<id>/reproject', methods=['POST'])
@@ -127,9 +126,9 @@ def reproject(id):
     pose = reconstruction.project_points(position, intrinsics, ext, dist_coeffs)
     
     
-    return {"result":{
-          "pose": {"x": pose.item(0), "y": pose.item(1)}
-       }}
+    return {
+            "pose": {"x": pose.item(0), "y": pose.item(1)}
+          }
 
 def get_response_thumbnail(instance):
     byte_arr = requests.get(url=f"{orthanc_server}/instances/{instance}/attachments/thumbnail/data",auth=auth).content
@@ -182,7 +181,7 @@ def shortcuts(id):
 @cross_origin()
 def images(id):
   
-  
+  print("Get Sphaeroptica images")
   response = requests.get(url=f"{orthanc_server}/series/{id}/instances-tags?simplify",auth=auth)
   if not response.ok:
     abort(404)
@@ -223,9 +222,10 @@ def images(id):
     vec = C - center
     long, lat = converters.get_long_lat(vec)
     image_data["longitude"], image_data["latitude"] = converters.rad2degrees(long), converters.rad2degrees(lat)
-    
+  
+  print(f"Sending {len(encoded_images)} images")
   to_jsonify["images"] = encoded_images
-  return jsonify({'result': to_jsonify})
+  return jsonify(to_jsonify)
 
 if __name__ == '__main__':
   print("HELLO")

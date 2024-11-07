@@ -230,7 +230,7 @@ def triangulate(output, uri, **request):
     data = json.loads(request['body'])
     poses = data['poses']
     
-    orthanc.LogWarning(f"Triangulate position of {len(pose)} poses")
+    orthanc.LogWarning(f"Triangulate position of {len(poses)} poses")
 
     proj_points = []
     for image in poses:

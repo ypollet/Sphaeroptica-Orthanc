@@ -17,6 +17,3 @@ COPY photogrammetry/* /etc/orthanc/python/photogrammetry
 
 RUN mkdir /etc/orthanc/sphaeroptica
 COPY frontend/dist/ /etc/orthanc/sphaeroptica
-
-
-RUN /.venv/bin/pip install pandas odfpy
