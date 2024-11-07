@@ -176,8 +176,6 @@ for item in [
     });
     ''' % (singular, singular, singular, plural, singular)
 
-orthanc.ExtendOrthancExplorer(extension)
-
 ##############################################################################
 #                                                                            #
 #------------------------------- SPHAEROPTICA -------------------------------#
@@ -397,7 +395,7 @@ def images(output, uri, **request):
 
 orthanc.RegisterRestCallback('/sphaeroptica/(.*)/images', images)
 
-extension = '''
+extension += '''
     const SPHAEROPTICA_PLUGIN_SOP_CLASS_UID = '1.2.840.10008.5.1.4.1.1.77.1.4'
     $('#series').live('pagebeforeshow', function() {
       var seriesId = $.mobile.pageData.uuid;
