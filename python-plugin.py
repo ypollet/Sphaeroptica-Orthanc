@@ -1,3 +1,33 @@
+# Sphaeroptica - 3D Viewer on calibrated
+
+# Copyright (C) 2023 Yann Pollet, Royal Belgian Institute of Natural Sciences
+
+#
+
+# This program is free software: you can redistribute it and/or
+
+# modify it under the terms of the GNU General Public License as
+
+# published by the Free Software Foundation, either version 3 of the
+
+# License, or (at your option) any later version.
+
+# 
+
+# This program is distributed in the hope that it will be useful, but
+
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+
+# General Public License for more details.
+
+#
+
+# You should have received a copy of the GNU General Public License
+
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 from base64 import encodebytes
 import io
 import os
@@ -6,175 +36,7 @@ import numpy as np
 
 from photogrammetry import helpers, converters, reconstruction
 
-import pandas
-
 import orthanc
-
-
-##############################################################################
-#                                                                            #
-#------------------------------- RAPPORT ODS --------------------------------#
-#                                                                            #
-##############################################################################
-
-def CreateReport(output, uri, **request):
-    if request['method'] != 'GET' :
-        output.SendMethodNotAllowed('GET')
-    else:
-        referer = request['headers'].get('referer', None)
-        if referer is None:
-            base = 'http://localhost:8042'
-        else:
-            base = os.path.dirname(os.path.dirname(referer))
-
-        level = request['groups'][0]
-        id = request['groups'][1]
-
-        all_tags_sheet = None
-
-        if level == 'instances':
-            tags = json.loads(orthanc.RestApiGet('/instances/%s/tags' % id))
-            data = []
-            for (k, v) in tags.items():
-                if v['Type'] == 'String':
-                    value = v['Value']
-                elif v['Type'] == 'Sequence':
-                    value = '(sequence)'
-                else:
-                    value = '(other)'
-                data.append([ '0x%s' % k.split(',') [0],
-                              '0x%s' % k.split(',') [1],
-                              v['Name'],
-                              value ])
-
-            all_tags_sheet = pandas.DataFrame(data, columns = [ 'Group', 'Element', 'Name', 'Value' ])
-
-        main_tags = []
-
-        info = json.loads(orthanc.RestApiGet('/%s/%s' % (level, id)))
-        for (k, v) in info['MainDicomTags'].items():
-            main_tags.append([ info['Type'], k, v ])
-
-        if level == 'studies':
-            studyInstanceUID = info['MainDicomTags']['StudyInstanceUID']
-            for (k, v) in info['PatientMainDicomTags'].items():
-                main_tags.append([ 'Patient', k, v ])
-        elif level == 'series':
-            study = json.loads(orthanc.RestApiGet('/series/%s/study' % id))
-            seriesInstanceUID = info['MainDicomTags']['SeriesInstanceUID']
-            studyInstanceUID = study['MainDicomTags']['StudyInstanceUID']
-            for (k, v) in study['MainDicomTags'].items():
-                main_tags.append([ 'Study', k, v ])
-            for (k, v) in study['PatientMainDicomTags'].items():
-                main_tags.append([ 'Patient', k, v ])
-
-            someInstance = info['Instances'][0]
-            metadata = json.loads(orthanc.RestApiGet('/instances/%s/metadata?expand' % someInstance))
-            content = json.loads(orthanc.RestApiGet('/instances/%s/content' % someInstance))
-            sopClassUID = metadata['SopClassUid']
-        elif level == 'instances':
-            someInstance = id
-            metadata = json.loads(orthanc.RestApiGet('/instances/%s/metadata?expand' % id))
-            content = json.loads(orthanc.RestApiGet('/instances/%s/content' % id))
-            sopClassUID = metadata['SopClassUid']
-            transferSyntaxUID = metadata['TransferSyntax']
-            study = json.loads(orthanc.RestApiGet('/instances/%s/study' % id))
-            series = json.loads(orthanc.RestApiGet('/instances/%s/series' % id))
-            for (k, v) in series['MainDicomTags'].items():
-                main_tags.append([ 'Series', k, v ])
-            for (k, v) in study['MainDicomTags'].items():
-                main_tags.append([ 'Study', k, v ])
-            for (k, v) in study['PatientMainDicomTags'].items():
-                main_tags.append([ 'Patient', k, v ])
-
-        main_tags_sheet = pandas.DataFrame(main_tags, columns = [ 'Level', 'Name', 'Value' ])
-
-        viewers = []
-
-        if level == 'studies':
-            viewers.append([ 'OHIF - Basic', os.path.join(base, 'ohif/viewer?url=../studies/%s/ohif-dicom-json' % id) ])
-            viewers.append([ 'OHIF - Volume', os.path.join(base, 'ohif/viewer?hangingprotocolId=mprAnd3DVolumeViewport&url=../studies/%s/ohif-dicom-json' % id) ])
-            viewers.append([ 'Kitware VolView', os.path.join(base, 'volview/index.html?names=[archive.zip]&urls=[../studies/%s/archive]') % id ])
-            viewers.append([ 'Stone Web viewer', os.path.join(base, 'stone-webviewer/index.html?study=%s' % studyInstanceUID) ])
-        elif level == 'series':
-            viewers.append([ 'Kitware VolView', os.path.join(base, 'volview/index.html?names=[archive.zip]&urls=[../series/%s/archive]' % id) ])
-            viewers.append([ 'Stone Web viewer', os.path.join(base, 'stone-webviewer/index.html?study=%s&series=%s' % (studyInstanceUID, seriesInstanceUID)) ])
-            viewers.append([ 'Orthanc Web viewer', os.path.join(base, 'web-viewer/app/viewer.html?series=%s' % id) ])
-            if sopClassUID == '1.2.840.10008.5.1.4.1.1.77.1.6':  # WSI
-                viewers.append([ 'Whole-slide imaging viewer', os.path.join(base, 'wsi/app/viewer.html?series=%s' % id) ])
-                viewers.append([ 'OpenSeadragon', os.path.join(base, 'wsi/app/openseadragon.html?image=../iiif/tiles/%s/info.json' % id) ])
-                viewers.append([ 'Mirador', os.path.join(base, 'wsi/app/mirador.html?iiif-content=../iiif/series/%s/manifest.json' % id) ])
-                viewers.append([ 'IIIF manifest', os.path.join(base, 'wsi/iiif/series/%s/manifest.json' % id) ])
-        elif level == 'instances':
-            if sopClassUID == '1.2.840.10008.5.1.4.1.1.104.1':  # PDF
-                viewers.append([ 'Encapsulated PDF file', os.path.join(base, 'instances/%s/pdf' % id) ])
-
-            if (transferSyntaxUID == '1.2.840.10008.1.2.4.50' and  # JPEG
-                '7fe0-0010' in content and
-                len(json.loads(orthanc.RestApiGet('/instances/%s/content/7fe0-0010' % id))) == 2):
-                viewers.append([ 'Raw JPEG frame', os.path.join(base, 'instances/%s/content/7fe0-0010/1' % id) ])
-
-        if level in [ 'instances', 'series' ]:
-            if sopClassUID == '1.2.840.10008.5.1.4.1.1.104.3':  # STL
-                viewers.append([ 'Basic STL viewer', os.path.join(base, 'stl/app/three.html?instance=%s' % someInstance) ])
-                viewers.append([ 'Online3DViewer', os.path.join(base, 'stl/app/o3dv.html?instance=%s' % someInstance) ])
-                viewers.append([ 'Encapsulated STL model', os.path.join(base, 'instances/%s/stl' % someInstance) ])
-
-            if sopClassUID == '1.2.840.10008.5.1.4.1.1.66':  # Raw, for Nexus
-                if ('4205-0010' in content and
-                    '4205-1001' in content and
-                    orthanc.RestApiGet('/instances/%s/content/4205-0010' % someInstance).decode('utf-8') == 'OrthancSTL'):
-                    viewers.append([ 'Basic Nexus viewer', os.path.join(base, 'stl/nexus/threejs.html?model=../../instances/%s/nexus' % someInstance) ])
-                    viewers.append([ '3DHOP', os.path.join(base, 'stl/3dhop/3DHOP_all_tools.html?instance=%s' % someInstance) ])
-                    viewers.append([ 'Encapsulated Nexus model', os.path.join(base, 'instances/%s/nexus' % someInstance) ])
-
-
-        viewers_sheet = pandas.DataFrame(viewers, columns = [ 'Name', 'URL' ])
-
-        b = io.BytesIO()
-        with pandas.ExcelWriter(b, engine='odf') as writer:
-            viewers_sheet.to_excel(writer, sheet_name='Viewers')
-            main_tags_sheet.to_excel(writer, sheet_name='Main DICOM tags')
-
-            if not all_tags_sheet is None:
-                all_tags_sheet.to_excel(writer, sheet_name='All tags')
-
-        output.AnswerBuffer(b.getvalue(), 'application/vnd.oasis.opendocument.spreadsheet')
-
-orthanc.RegisterRestCallback('/(patients|studies|series|instances)/(.*)/report.ods', CreateReport)
-
-
-
-extension = ''
-
-for item in [
-        ('patients', 'patient'),
-        ('studies', 'study'),
-        ('series', 'series'),
-        ('instances', 'instance'),
-]:
-    plural = item[0]
-    singular = item[1]
-
-    extension += '''
-    $('#%s').live('pagebeforeshow', function() {
-      $('#%s-report-button').remove();
-
-      var b = $('<a>')
-          .attr('id', '%s-report-button')
-          .attr('data-role', 'button')
-          .attr('href', '#')
-          .attr('data-icon', 'gear')
-          .attr('data-theme', 'e')
-          .text('Download report')
-          .button()
-          .click(function(e) {
-            window.open('../%s/' + $.mobile.pageData.uuid + '/report.ods');
-          });
-
-      b.insertAfter($('#%s-access'));
-    });
-    ''' % (singular, singular, singular, plural, singular)
 
 ##############################################################################
 #                                                                            #
@@ -395,7 +257,7 @@ def images(output, uri, **request):
 
 orthanc.RegisterRestCallback('/sphaeroptica/(.*)/images', images)
 
-extension += '''
+extension = '''
     const SPHAEROPTICA_PLUGIN_SOP_CLASS_UID = '1.2.840.10008.5.1.4.1.1.77.1.4'
     $('#series').live('pagebeforeshow', function() {
       var seriesId = $.mobile.pageData.uuid;
