@@ -101,7 +101,7 @@ This will create a new Docker image, based on [jodogne/orthanc-python](https://h
 docker run -p 4242:4242 -p 8042:8042 --rm -v /path/to/Configuration.json:/etc/orthanc/orthanc.json:ro -v /path/to/python-plugin.py:/etc/orthanc/python/plugin.py -v /path/to/Storage/:/var/lib/orthanc/db/ orthanc-sphaeroptica
 ```
 
-### Send data to OrthancServer
+
 
 ### Development
 
