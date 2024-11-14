@@ -164,8 +164,7 @@ def get_response_thumbnail(instance):
           }
 
 def get_response_image(instance) -> bytearray:
-    byte_arr = orthanc.RestApiGet(f"/instances/{instance}/content/7fe0-0010/1")
-    return byte_arr
+    return orthanc.RestApiGet(f"/instances/{instance}/content/7fe0-0010/1")
 
 
 # send single image

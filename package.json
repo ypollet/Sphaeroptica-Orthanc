@@ -10,5 +10,8 @@
         "build-only": "cd frontend && npm run build-only",
         "type-check": "cd frontend && npm run type-check",
         "install": "cd frontend && npm install"
+    },
+    "dependencies": {
+        "destr": "^2.0.3"
     }
 }

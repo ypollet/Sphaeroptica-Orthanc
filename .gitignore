@@ -4,3 +4,4 @@ test.py
 .env
 sc.dcm
 AddThumbnail.py
+node_modules

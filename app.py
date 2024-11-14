@@ -161,12 +161,9 @@ def reproject(id):
           }
 
 def get_response_thumbnail(instance):
-    byte_arr = requests.get(url=f"{orthanc_server}/instances/{instance}/attachments/thumbnail/data",auth=auth).content
-    encoded_img = encodebytes(byte_arr).decode('ascii') # encode as base64
-    format = "jpeg"
-    return {"image": f"data:image/{format};base64, {encoded_img}",
+    return {"image": f"{orthanc_server}/instances/{instance}/attachments/thumbnail/data",
             "name" : instance,
-            "format": format,
+            "format": "jpeg",
           }
 
 def get_response_image(instance):
@@ -186,9 +183,7 @@ def image(id,image_id):
       as_attachment=False)       
   except Exception as error:
     print(error)
-  
 
-  
 
 # send_shortcuts page
 @app.route('/<id>/shortcuts')

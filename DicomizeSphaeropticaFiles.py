@@ -136,9 +136,9 @@ for image in images:
     block.add_new(0x30, VR.FD, distortion_matrix)
     
     """
-    "4231,1027"   : [ "FD", "Intrinsics", 4, 4, "Sphaeroptica"],
-    "4231,1028"   : [ "FD", "RotationMat", 9, 9, "Sphaeroptica"],
-    "4231,1029"   : [ "FD", "TranslationMat", 3, 3, "Sphaeroptica"],
+    "4231,1027"   : [ "FD", "IntrinsicsMatrix", 4, 4, "Sphaeroptica"],
+    "4231,1028"   : [ "FD", "RotationMatrix", 9, 9, "Sphaeroptica"],
+    "4231,1029"   : [ "FD", "TranslationMatrix", 3, 3, "Sphaeroptica"],
     "4231,1030"   : [ "FD", "DistortionCoefficients", 4, 8, "Sphaeroptica"]
     """
     file_name = f'/home/psadmin/Numerisation/test_dicomization/dicomized_sphaeroptica/sc_{i : 06d}.dcm'
