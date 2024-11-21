@@ -36,14 +36,12 @@ from pydicom.valuerep import VR
 import glob
 import json
 import numpy as np
-from pathlib import Path
-home = Path.home()
 import requests
 import os
 
-path_to_project = "Numerisation/test_dicomization/test_sphaeroptica/Study/Serie"
-SOURCE = f'{home}/{path_to_project}/*.jpg'
-calib_file = f'{home}/{path_to_project}/calibration.json'
+path_to_project = "data/geonemus"
+SOURCE = f'{path_to_project}/*.jpg'
+calib_file = f'{path_to_project}/calibration.json'
 images = sorted(glob.glob(SOURCE))
 i = 0
 
@@ -60,12 +58,19 @@ series_uid = pydicom.uid.generate_uid()
 
 extrinsics_list = calib_dict["extrinsics"]
 
+thumbnails_width = calib_dict["thumbnails_width"]
+thumbnails_height  = calib_dict["thumbnails_height"]
+
+commands : dict = { v:k for (k,v) in calib_dict["commands"].items()}
+
+
+
 for image in images:    
     camera = os.path.basename(image)
     print(camera)
     ds = pydicom.dataset.Dataset()
-    ds.PatientName = 'Philodicus^sp_dcm'
-    ds.PatientID = 'EADIPT123456453'
+    ds.PatientName = 'Geonemus^Geoffroyii'
+    ds.PatientID = 'Geonemus10275665'
     ds.PatientBirthDate = '20200914'
     ds.PatientSex = 'O'
 
@@ -104,7 +109,7 @@ for image in images:
         ds.Rows = im.size[1]
         ds.Columns = im.size[0]
         
-        im.thumbnail((1500, 1000))
+        im.thumbnail((thumbnails_width, thumbnails_height))
         thumbnail_buffer = BytesIO()
         im.save(thumbnail_buffer, format="JPEG")
         thumbnail_buffer.getvalue()
@@ -141,18 +146,20 @@ for image in images:
     "4231,1029"   : [ "FD", "TranslationMatrix", 3, 3, "Sphaeroptica"],
     "4231,1030"   : [ "FD", "DistortionCoefficients", 4, 8, "Sphaeroptica"]
     """
-    file_name = f'/home/psadmin/Numerisation/test_dicomization/dicomized_sphaeroptica/sc_{i : 06d}.dcm'
-
-    ds.save_as(file_name, write_like_original=False)
+    out : BytesIO = BytesIO()
+    ds.save_as(out, write_like_original=False)
     
-    with open(file_name, 'rb') as f:
-        bytes_dcm = f.read()
-    
-    response = requests.post('http://localhost:8042/instances', bytes_dcm)
+    response = requests.post('http://localhost:8042/instances', out.getvalue())
     
     response.raise_for_status()
     
     uuid = response.json()["ID"]
+    series_uuid = response.json()["ParentSeries"]
     
     r = requests.put(f'http://localhost:8042/instances/{uuid}/attachments/thumbnail', data=thumbnail_buffer.getvalue())
     i += 1
+    
+    if(camera in commands.keys()): 
+        print(f"Shortcut {commands[camera]} : {camera}")
+        response = requests.put(f"http://localhost:8042/series/{series_uuid}/metadata/shortcut_{commands[camera][0]}", data=uuid)
+    response.raise_for_status()

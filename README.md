@@ -103,6 +103,14 @@ docker run -p 4242:4242 -p 8042:8042 --rm -v /path/to/Configuration.json:/etc/or
 
 ### Send data to OrthancServer
 
+TODO : an API to send directly your data to the Orthanc server.
+
+If you execute "DicomizeSphaeropticaFiles.py", it will send the Sphaeroptica project in "data" and make the plugin usable.
+
+```
+python3 DicomizeSphaeropticaFiles.py
+```
+
 ### Development
 
 There is a Flask App that connects to the Orthanc server through API requests if needed for development purposes.
