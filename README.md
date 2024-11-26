@@ -141,7 +141,14 @@ VITE_BACKEND_URL=http://localhost:5000
 
 It will connect to the Flask server (that connects to the Orthanc API) instead.
 
-Start the server : 
+Install the python requirements :
+
+```
+pip install color flask flask_cors numpy python-dotenv requests
+```
+
+Start the server :
+
 ```
 flask run
 ```
