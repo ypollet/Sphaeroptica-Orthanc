@@ -83,12 +83,22 @@ As Private Tags, each instance has the calibration data :
 
 ## Start Orthanc with Sphaeroptica
 
-### Build Production of Vue Frontend
+### Requirements
+
+The following steps have been made with :
 ```
-npm run install
-npm run build
+node v18.17.1
+npm 10.8.2
 ```
 
+### Build Production files of Vue Frontend
+```
+cd frontend
+npm install
+npm build
+```
+
+The files in the *dist* directory will be used by Orthanc
 ### Create Docker Image
 ```
 docker build -t orthanc-sphaeroptica:latest .
