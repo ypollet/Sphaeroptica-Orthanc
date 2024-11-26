@@ -58,7 +58,7 @@ This needs to be updated in the configuration file as well :
 },
 
 "UserContentType": {
-    "thumbnail" : [1024, "image/jpeg"],
+    "thumbnail" : [1024, "image/jpeg"]
 },
 
 "LoadPrivateDictionary" : true,
