@@ -110,9 +110,9 @@ def triangulate(id):
       if not response.ok:
         abort(404)
       tags : dict = json.loads(response.content)
-      intrinsics = np.matrix([float(x) for x in tags["Intrinsics"].split("\\")]).reshape((3,3))
-      rotation = np.matrix([float(x) for x in tags["RotationMat"].split("\\")]).reshape((3,3))
-      trans = np.matrix([float(x) for x in tags["TranslationMat"].split("\\")]).reshape((3,1))
+      intrinsics = np.matrix([float(x) for x in tags["IntrinsicsMatrix"].split("\\")]).reshape((3,3))
+      rotation = np.matrix([float(x) for x in tags["RotationMatrix"].split("\\")]).reshape((3,3))
+      trans = np.matrix([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))
       dist_coeffs = np.matrix([float(x) for x in tags["DistortionCoefficients"].split("\\")]).reshape(1, -1)
       #print(np.concatenate([dist_coeffs, np.matrix([0 for x in range(8 - dist_coeffs.shape[1])])], axis=1))
       
@@ -145,11 +145,11 @@ def reproject(id):
     if not response.ok:
       abort(404)
     tags : dict = json.loads(response.content)
-    intrinsics = np.matrix([float(x) for x in tags["Intrinsics"].split("\\")]).reshape((3,3))
+    intrinsics = np.matrix([float(x) for x in tags["IntrinsicsMatrix"].split("\\")]).reshape((3,3))
     dist_coeffs = np.matrix([float(x) for x in tags["DistortionCoefficients"].split("\\")]).reshape(1, -1)
     
-    rotation = np.matrix([float(x) for x in tags["RotationMat"].split("\\")]).reshape((3,3))
-    trans = np.matrix([float(x) for x in tags["TranslationMat"].split("\\")]).reshape((3,1))
+    rotation = np.matrix([float(x) for x in tags["RotationMatrix"].split("\\")]).reshape((3,3))
+    trans = np.matrix([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))
     ext = np.hstack((rotation, trans))
     extrinsics =  np.vstack((ext, [0, 0, 0 ,1]))
     
@@ -226,8 +226,8 @@ def images(id):
         "width" : tags["Columns"]
       })
       
-      rotation = np.array([float(x) for x in tags["RotationMat"].split("\\")]).reshape((3,3))
-      trans = np.array([float(x) for x in tags["TranslationMat"].split("\\")]).reshape((3,1))
+      rotation = np.array([float(x) for x in tags["RotationMatrix"].split("\\")]).reshape((3,3))
+      trans = np.array([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))
       C = converters.get_camera_world_coordinates(rotation, trans)
       
       centers[instance] = C
