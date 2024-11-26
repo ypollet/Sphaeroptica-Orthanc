@@ -30,7 +30,7 @@ For this you must update the configuration json file :
         ".ico": "image/x-icon"
     },
     "Folders": {
-        "/sphaeroptica/ui/" : "/path/to/sphaeroptica/frontend/public"
+        "/sphaeroptica/ui/" : "/path/to/sphaeroptica/frontend/dist"
     }
 },
 "PythonScript" : "/path/to/plugin.py",
@@ -45,6 +45,8 @@ For that we will use different core-mechanism to add information on a DICOM enti
 * [User-defined metadata](https://orthanc.uclouvain.be/book/faq/features.html?highlight=user%20defined%20metadata#user-defined-metadata)
 * [User-defined attachment](https://orthanc.uclouvain.be/book/faq/features.html?highlight=user%20defined%20metadata#user-defined-attachments)
 * [Private Tags](https://orthanc.uclouvain.be/book/users/advanced-rest.html?highlight=private%20tags#creating-dicom-instance-with-private-tags)
+
+This needs to be updated in the configuration file as well :
 ```
 "UserMetadata": {
     "shortcut_F" : 1024,
