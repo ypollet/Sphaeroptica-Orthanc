@@ -175,7 +175,7 @@ def image(output, uri, **request):
     try:
       instanceId = request['groups'][0]
       image_binary = get_response_image(instanceId)
-      output.AnswerBuffer(image_binary, 'text/plain')
+      output.AnswerBuffer(image_binary, 'image/jpeg')
     except Exception as error:
       orthanc.LogError(error)
   else:
