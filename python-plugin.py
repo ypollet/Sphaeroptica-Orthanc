@@ -157,7 +157,7 @@ orthanc.RegisterRestCallback('/sphaeroptica/(.*)/full-image', image)
 def thumbnail(output, uri, **request):
   if request['method'] == 'GET':
     instanceId = request['groups'][0]
-    orthanc.LogWarning(f"Request full image of {instanceId}")
+    orthanc.LogWarning(f"Request thumbnail image of {instanceId}")
     try:
       instanceId = request['groups'][0]
       image_binary = get_response_thumbnail(instanceId)
@@ -167,7 +167,7 @@ def thumbnail(output, uri, **request):
   else:
     output.SendMethodNotAllowed('GET')
   
-orthanc.RegisterRestCallback('/sphaeroptica/(.*)/thumbnail', image)
+orthanc.RegisterRestCallback('/sphaeroptica/(.*)/thumbnail', thumbnail)
   
 
 # send_shortcuts page
