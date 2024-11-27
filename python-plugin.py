@@ -134,6 +134,8 @@ orthanc.RegisterRestCallback('/sphaeroptica/(.*)/reproject', reproject)
 def get_response_image(instance) -> bytearray:
     return orthanc.RestApiGet(f"/instances/{instance}/content/7fe0-0010/1")
 
+def get_response_thumbnail(instance) -> bytearray:
+    return orthanc.RestApiGet(f"/instances/{instance}/attachments/thumbnail/data")
 
 # send single image
 def image(output, uri, **request):
@@ -158,7 +160,7 @@ def thumbnail(output, uri, **request):
     orthanc.LogWarning(f"Request full image of {instanceId}")
     try:
       instanceId = request['groups'][0]
-      image_binary = get_response_image(instanceId)
+      image_binary = get_response_thumbnail(instanceId)
       output.AnswerBuffer(image_binary, 'image/jpeg')
     except Exception as error:
       orthanc.LogError(error)
@@ -239,7 +241,6 @@ def images(output, uri, **request):
     output.SendMethodNotAllowed('GET')
 
 orthanc.RegisterRestCallback('/sphaeroptica/(.*)/images', images)
-
 extension = '''
     const SPHAEROPTICA_PLUGIN_SOP_CLASS_UID = '1.2.840.10008.5.1.4.1.1.77.1.4'
     $('#series').live('pagebeforeshow', function() {
