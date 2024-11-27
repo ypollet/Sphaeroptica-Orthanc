@@ -114,7 +114,6 @@ def triangulate(id):
       rotation = np.matrix([float(x) for x in tags["RotationMatrix"].split("\\")]).reshape((3,3))
       trans = np.matrix([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))
       dist_coeffs = np.matrix([float(x) for x in tags["DistortionCoefficients"].split("\\")]).reshape(1, -1)
-      #print(np.concatenate([dist_coeffs, np.matrix([0 for x in range(8 - dist_coeffs.shape[1])])], axis=1))
       
       ext = np.hstack((rotation, trans))
       extrinsics =  np.vstack((ext, [0, 0, 0 ,1]))
@@ -122,12 +121,10 @@ def triangulate(id):
       proj_mat = reconstruction.projection_matrix(intrinsics, extrinsics)
       pose = np.matrix([poses[image]['x'], poses[image]['y']])
       undistorted_pos = reconstruction.undistort_iter(np.array([pose]).reshape((1,1,2)), intrinsics, dist_coeffs)
-      print(f"{image} => \n{proj_mat}\n{undistorted_pos}")
       proj_points.append(helpers.ProjPoint(proj_mat, undistorted_pos))
     
     # Triangulation computation with all the undistorted landmarks
     landmark_pos = reconstruction.triangulate_point(proj_points)
-    print(f"Position = {landmark_pos}") 
   
     return {
             "position": landmark_pos.tolist()
@@ -161,10 +158,8 @@ def reproject(id):
           }
 
 def get_response_thumbnail(instance):
-    return {"image": f"{orthanc_server}/instances/{instance}/attachments/thumbnail/data",
-            "name" : instance,
-            "format": "jpeg",
-          }
+    byte_arr = requests.get(url=f"{orthanc_server}/instances/{instance}/attachments/thumbnail/data",auth=auth).content
+    return byte_arr
 
 def get_response_image(instance):
     byte_arr = requests.get(url=f"{orthanc_server}/instances/{instance}/content/7fe0-0010/1",auth=auth).content
@@ -172,7 +167,7 @@ def get_response_image(instance):
 
 
 # send single image
-@app.route('/<id>/<image_id>')
+@app.route('/<id>/<image_id>/full-image')
 @cross_origin()
 def image(id,image_id):
   try:
@@ -184,6 +179,18 @@ def image(id,image_id):
   except Exception as error:
     print(error)
 
+# send single image
+@app.route('/<id>/<image_id>/thumbnail')
+@cross_origin()
+def thumbnail(id,image_id):
+  try:
+    image_binary = get_response_thumbnail(image_id)
+    return send_file(
+      io.BytesIO(image_binary),
+      mimetype='image/jpeg',
+      as_attachment=False)       
+  except Exception as error:
+    print(error)
 
 # send_shortcuts page
 @app.route('/<id>/shortcuts')
@@ -220,11 +227,12 @@ def images(id):
   centers_z = []
   for instance, tags in orthanc_dict.items():
     try:
-      image_data = get_response_thumbnail(instance)
-      image_data.update({
+      image_data = {
+        "image": "",
+        "name" : instance,
         "height" : tags["Rows"],
         "width" : tags["Columns"]
-      })
+      }
       
       rotation = np.array([float(x) for x in tags["RotationMatrix"].split("\\")]).reshape((3,3))
       trans = np.array([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))

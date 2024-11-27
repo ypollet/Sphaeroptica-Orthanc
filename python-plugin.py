@@ -63,30 +63,6 @@ OWNER = {
         'name': 'Royal Belgian Institute of Natural Sciences',
 }
 
-'''def index(output, uri, **request):
-  orthanc.LogWarning("Sending Sphaeroptica html")
-  index_html = orthanc.RestApiGetAfterPlugins(f"/sphaeroptica/frontend/index.html")
-  orthanc.LogWarning("Sphaeroptica html received")
-  output.AnswerBuffer(index_html, 'text/html')
-orthanc.RegisterRestCallback('/sphaeroptica/app', index)
-
-def my_static(output, uri, **request):
-  filename = request["groups"][0]
-  file = orthanc.RestApiGetAfterPlugins(f"/sphaeroptica/frontend/{filename}")
-  match filename.split(".")[-1]:
-    case "js":
-      mime = "text/javascript"
-    case "css":
-      mime = "text/css"
-    case "html":
-      mime = "text/html"
-    case _:
-      mime = "text/plain"
-      
-  orthanc.LogWarning(f"Sending static file {filename} : {mime}")
-  output.AnswerBuffer(file, mime)
-orthanc.RegisterRestCallback('/sphaeroptica/static/(.*)', my_static)'''
-
 def triangulate(output, uri, **request):
   if request['method'] == 'POST':
     data = json.loads(request['body'])
@@ -154,14 +130,6 @@ def reproject(output, uri, **request):
 
 orthanc.RegisterRestCallback('/sphaeroptica/(.*)/reproject', reproject)
 
-def get_response_thumbnail(instance):
-    byte_arr = orthanc.RestApiGet(f"/instances/{instance}/attachments/thumbnail/data")
-    encoded_img = encodebytes(byte_arr).decode('ascii') # encode as base64
-    format = "jpeg"
-    return {"image": f"data:image/{format};base64, {encoded_img}",
-            "name" : instance,
-            "format": format,
-          }
 
 def get_response_image(instance) -> bytearray:
     return orthanc.RestApiGet(f"/instances/{instance}/content/7fe0-0010/1")
@@ -182,6 +150,22 @@ def image(output, uri, **request):
     output.SendMethodNotAllowed('GET')
   
 orthanc.RegisterRestCallback('/sphaeroptica/(.*)/full-image', image)
+
+# send single image
+def thumbnail(output, uri, **request):
+  if request['method'] == 'GET':
+    instanceId = request['groups'][0]
+    orthanc.LogWarning(f"Request full image of {instanceId}")
+    try:
+      instanceId = request['groups'][0]
+      image_binary = get_response_image(instanceId)
+      output.AnswerBuffer(image_binary, 'image/jpeg')
+    except Exception as error:
+      orthanc.LogError(error)
+  else:
+    output.SendMethodNotAllowed('GET')
+  
+orthanc.RegisterRestCallback('/sphaeroptica/(.*)/thumbnail', image)
   
 
 # send_shortcuts page
@@ -219,11 +203,11 @@ def images(output, uri, **request):
       centers_z = []
       for instance, tags in orthanc_dict.items():
         try:
-          image_data = get_response_thumbnail(instance)
-          image_data.update({
+          image_data = {"image": "",
+            "name" : instance,
             "height" : tags["Rows"],
             "width" : tags["Columns"]
-          })
+          }
           
           rotation = np.array([float(x) for x in tags["RotationMatrix"].split("\\")]).reshape((3,3))
           trans = np.array([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))

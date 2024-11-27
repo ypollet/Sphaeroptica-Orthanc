@@ -43,7 +43,7 @@ ENV PYTHONPATH=/.venv/lib64/python3.11/site-packages/
 RUN mkdir /etc/orthanc/python
 RUN mkdir /etc/orthanc/python/photogrammetry
 COPY photogrammetry/* /etc/orthanc/python/photogrammetry
-
+COPY python-plugin.py /etc/orthanc/python/plugin.py
 
 RUN mkdir /etc/orthanc/sphaeroptica
 COPY frontend/dist/ /etc/orthanc/sphaeroptica
