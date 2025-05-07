@@ -210,7 +210,11 @@ def shortcuts(output, uri, **request):
             to_jsonify = {}
             to_jsonify["commands"] = dict()
             for command, shortcut in shortcuts_metadata.items():
-                to_jsonify["commands"][command] = shortcut_dict[shortcut]
+                coordinates = [float(i) for i in shortcut_dict[shortcut].split(";")]
+                to_jsonify["commands"][command] = {
+                    "longitude": coordinates[0],
+                    "latitude": coordinates[1],
+                }
             output.AnswerBuffer(json.dumps(to_jsonify), "application/json")
         except ValueError as e:
             orthanc.LogError(e)
