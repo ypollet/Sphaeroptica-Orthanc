@@ -126,10 +126,8 @@ def triangulate(id):
     # Triangulation computation with all the undistorted landmarks
     landmark_pos = reconstruction.triangulate_point(proj_points)
   
-    return {
-            "position": landmark_pos.tolist()
-          }
-          
+    return jsonify(landmark_pos.tolist())
+         
 
 @app.route('/<id>/reproject', methods=['POST'])
 def reproject(id):
@@ -149,13 +147,13 @@ def reproject(id):
     trans = np.matrix([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))
     ext = np.hstack((rotation, trans))
     extrinsics =  np.vstack((ext, [0, 0, 0 ,1]))
+
+
     
     pose = reconstruction.project_points(position, intrinsics, ext, dist_coeffs)
     
     
-    return {
-            "pose": {"x": pose.item(0), "y": pose.item(1)}
-          }
+    return jsonify({"x": pose.item(0), "y": pose.item(1)})
 
 def get_response_thumbnail(instance):
     byte_arr = requests.get(url=f"{orthanc_server}/instances/{instance}/attachments/thumbnail/data",auth=auth).content
@@ -204,7 +202,11 @@ def shortcuts(id):
   to_jsonify = {}
   to_jsonify["commands"] = dict()
   for command, shortcut in shortcuts_metadata.items():
-    to_jsonify["commands"][command] = shortcut_dict[shortcut]
+    long, lat = shortcut_dict[shortcut].split(";")
+    to_jsonify["commands"][command] = {
+      "longitude": long,
+      "latitude": lat
+    }
   return jsonify(to_jsonify)
 
 
@@ -227,13 +229,15 @@ def images(id):
   centers_z = []
   for instance, tags in orthanc_dict.items():
     try:
-      image_data = {
-        "image": "",
-        "name" : instance,
-        "height" : tags["Rows"],
-        "width" : tags["Columns"]
-      }
-      
+      attachments = json.loads(
+                        requests.get(url=f"{orthanc_server}/instances/{instance}/attachments",auth=auth).content
+                    )
+      thumbnails = "thumbnail" in attachments
+      image_data = {"name": instance, "image": "", "thumbnail": ""}
+
+      width = tags["Columns"]
+      height = tags["Rows"]
+
       rotation = np.array([float(x) for x in tags["RotationMatrix"].split("\\")]).reshape((3,3))
       trans = np.array([float(x) for x in tags["TranslationMatrix"].split("\\")]).reshape((3,1))
       C = converters.get_camera_world_coordinates(rotation, trans)
@@ -254,10 +258,19 @@ def images(id):
     C = centers[instance]
     vec = C - center
     long, lat = converters.get_long_lat(vec)
-    image_data["longitude"], image_data["latitude"] = converters.rad2degrees(long), converters.rad2degrees(lat)
+    image_data["coordinates"] = {
+                                  "longitude": converters.rad2degrees(long),
+                                  "latitude": converters.rad2degrees(lat),
+                                }
   
-  print(f"Sending {len(encoded_images)} images")
-  to_jsonify["images"] = encoded_images
+  to_jsonify = {
+                  "images": encoded_images,
+                  "size": {
+                    "height": height,
+                    "width": width,
+                  },
+                  "thumbnails": thumbnails,
+                }
   return jsonify(to_jsonify)
 
 if __name__ == '__main__':
