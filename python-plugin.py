@@ -99,7 +99,7 @@ def triangulate(output, uri, **request):
 
         # Triangulation computation with all the undistorted landmarks
         landmark_pos = reconstruction.triangulate_point(proj_points)
-        to_jsonify = {"position": landmark_pos.tolist()}
+        to_jsonify = landmark_pos.tolist()
 
         output.AnswerBuffer(json.dumps(to_jsonify, indent=3), "application/json")
 
@@ -143,7 +143,7 @@ def reproject(output, uri, **request):
 
         pose = reconstruction.project_points(position, intrinsics, ext, dist_coeffs)
 
-        to_jsonify = {"pose": {"x": pose.item(0), "y": pose.item(1)}}
+        to_jsonify = {"x": pose.item(0), "y": pose.item(1)}
 
         output.AnswerBuffer(json.dumps(to_jsonify, indent=3), "application/json")
     else:
@@ -207,11 +207,10 @@ def shortcuts(output, uri, **request):
                 orthanc.RestApiGet(f"/series/{seriesId}/metadata?expand")
             )
 
-            to_jsonify = {}
-            to_jsonify["commands"] = dict()
+            to_jsonify = dict()
             for command, shortcut in shortcuts_metadata.items():
                 coordinates = [float(i) for i in shortcut_dict[shortcut].split(";")]
-                to_jsonify["commands"][command] = {
+                to_jsonify[command] = {
                     "longitude": coordinates[0],
                     "latitude": coordinates[1],
                 }

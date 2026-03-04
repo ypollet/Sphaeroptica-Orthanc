@@ -199,11 +199,10 @@ def shortcuts(id):
     abort(404)
   
   shortcut_dict = json.loads(response.content)
-  to_jsonify = {}
-  to_jsonify["commands"] = dict()
+  to_jsonify = dict()
   for command, shortcut in shortcuts_metadata.items():
     long, lat = shortcut_dict[shortcut].split(";")
-    to_jsonify["commands"][command] = {
+    to_jsonify[command] = {
       "longitude": long,
       "latitude": lat
     }
