@@ -307,7 +307,6 @@ extension = """
     
       GetResource('/series/' + seriesId, function(series) {
         GetResource('/instances/' + series['Instances'][0] + '/tags?simplify', function(instance) {
-          console.log(instance['SOPClassUID']);
 
           if (instance['SOPClassUID'] == SPHAEROPTICA_PLUGIN_SOP_CLASS_UID) {
             $('#sphaeroptica-button').remove();
